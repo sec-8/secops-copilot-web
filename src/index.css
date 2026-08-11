@@ -1,0 +1,5 @@
+/* Tailwind CDN 接管所有样式 — 仅保留 reset */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
