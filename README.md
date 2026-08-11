@@ -219,5 +219,5 @@ MIT
 
 ## 🤝 配套仓库
 
-- **后端**：[secops-copilot-backend](https://github.com/xxx/secops-copilot-backend)
+- **后端**：[secops-copilot-backend](https://github.com/sec-8/secops-copilot-backend)
 - **演示 Demo GIF**：[链接待补]
