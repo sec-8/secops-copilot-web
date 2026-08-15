@@ -19,78 +19,68 @@ SecOps Copilot 的前端 Web 应用。**流式渲染** AI 研判过程，把 4 �
 
 ### 2. **工具调用卡片**（ToolCallCard）
 - 工具名称 + 参数 + 结果**自动折叠**
-- 多次工具调用**配对配对**（call_id 配对）
+- 多次工具调用**用 call_id 配对**
 - 失败 / 异常**有**视觉提示
 
-### 3. **状态栏**（StatusBar）
+### 3. **状态栏 + 可观测**（StatusBar）
 - 实时显示**当前状态**（思考中 / 工具调用中 / 等待输入 / 异常）
 - **trace_id 链接**到 Langfuse Dashboard
-- **可观测**全链路——**点链接看**完整 trace
-
-### 4. **滚动行为**（useChatStream）
 - **不打断**用户阅读——长消息不强制滚到底
-- 新消息**平滑**滚动——**有**视觉提示
 
 ## 🏗️ 架构
 
+### SSE 流式数据流
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant CI as ChatInput
+    participant H as useChatStream
+    participant B as 后端 /chat/stream
+    participant CM as ChatMessage
+    participant T as ToolCallCard
+    participant SB as StatusBar
+
+    U->>CI: 输入问题
+    CI->>H: POST /chat/stream
+    H->>B: fetch + ReadableStream
+    B-->>H: SSE 4 事件
+    H->>CM: 渲染消息
+    H->>T: 工具调用配对 (call_id)
+    H->>SB: 显示状态 + trace_id
+    SB-->>U: 点击跳 Langfuse
 ```
-                    ┌──────────────────┐
-                    │   ChatInput      │  ← 用户输入
-                    └────────┬─────────┘
-                             ↓
-                    ┌──────────────────┐
-                    │  useChatStream   │  ← fetch + ReadableStream
-                    │  (SSE 消费)      │     解析 4 事件
-                    └────────┬─────────┘
-                             ↓
-                ┌────────────┼────────────┐
-                ↓            ↓            ↓
-       ┌─────────────┐ ┌──────────┐ ┌──────────────┐
-       │ ChatMessage │ │ ToolCall │ │  StatusBar   │
-       │             │ │  Card    │ │ (trace_id)   │
-       └─────────────┘ └──────────┘ └──────────────┘
-                ↓
-       ┌─────────────────────────────┐
-       │  useTypewriter              │  ← 打字机渲染
-       │  (逐字输出)                  │
-       └─────────────────────────────┘
+
+### 核心组件分层
+
+```mermaid
+graph TB
+    A[ChatInput] --> B[useChatStream]
+    B --> C[ChatMessage]
+    B --> D[ToolCallCard]
+    B --> E[StatusBar]
+    C --> F[useTypewriter]
+    B -->|SSE 4 事件| G[后端 /chat/stream]
+    E -->|trace_id| H[Langfuse Dashboard]
 ```
+
+**对应后端**：`POST /chat/stream` SSE **端点**（`app/main.py`）→ **返**回 4 **事**件**（`thinking_start` / `tool_call` / `tool_result` / `final_answer`）
 
 ## 📂 项目结构
 
 ```
 secops-copilot-web/
-├── public/                       # 静态资源
-│   ├── favicon.svg
-│   └── icons.svg
+├── public/                   # 静态资源
 ├── src/
-│   ├── assets/                   # 图片资源
-│   │   ├── hero.png
-│   │   ├── react.svg
-│   │   └── vite.svg
-│   ├── components/               # 组件
-│   │   ├── ChatInput.tsx         # 输入框
-│   │   ├── ChatMessage.tsx       # 消息渲染
-│   │   ├── StatusBar.tsx         # 状态栏
-│   │   └── ToolCallCard.tsx      # 工具调用卡片
-│   ├── hooks/                    # 自定义 Hooks
-│   │   ├── useChatStream.ts      # SSE 流式消费
-│   │   └── useTypewriter.ts      # 打字机效果
-│   ├── types/                    # TypeScript 类型
-│   │   └── events.ts             # 4 事件 union
-│   ├── App.tsx                   # 根组件
-│   ├── main.tsx                  # 入口
-│   └── index.css                 # 全局样式
-├── eslint.config.js
-├── index.html
-├── package.json
-├── package-lock.json
+│   ├── components/           # 4 组件（ChatInput / ChatMessage / StatusBar / ToolCallCard）
+│   ├── hooks/                # 2 Hooks（useChatStream / useTypewriter）
+│   ├── types/                # TypeScript 类型（events.ts）
+│   ├── App.tsx               # 根组件
+│   └── main.tsx              # 入口
+├── Dockerfile                # Docker 化
+├── vite.config.ts            # Vite + 代理配置
 ├── tsconfig.json
-├── tsconfig.app.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── Dockerfile
-└── README.md
+└── package.json
 ```
 
 ## 🚀 快速开始
@@ -104,7 +94,7 @@ secops-copilot-web/
 
 ```bash
 # 1. 克隆
-git clone https://github.com/xxx/secops-copilot-web.git
+git clone https://github.com/sec-8/secops-copilot-web.git
 cd secops-copilot-web
 
 # 2. 安装依赖
@@ -160,11 +150,7 @@ while (true) {
 }
 ```
 
-**为什么不使用 EventSource**？
-- EventSource **只**支持 GET——后端是 POST
-- fetch + ReadableStream 是**唯一**能 POST 又**流式**的方案
-
-## 🎨 关键设计决策
+## 🎨 关键设计
 
 ### 1. **打字机效果**
 
@@ -181,18 +167,7 @@ useEffect(() => {
 }, [displayed, fullText])
 ```
 
-**为什么**：用户**看到** AI **在思考**——**降低**等待焦虑
-
-### 2. **工具调用配对**（call_id）
-
-```typescript
-// tool_call 和 tool_result 用 call_id 配对
-tool_call.call_id === tool_result.call_id
-```
-
-**关键**：后端**必须** `call_id: tool_call.id`——**前端**配对**靠**这个
-
-### 3. **trace_id 链接**
+### 2. **trace_id 链接**
 
 ```typescript
 // final_answer 事件带 trace_id
@@ -200,8 +175,6 @@ tool_call.call_id === tool_result.call_id
 // 点击跳转到 Langfuse Dashboard
 window.open(`https://cloud.langfuse.com/trace/${trace_id}`)
 ```
-
-**为什么**：用户**点**消息**能看**完整 trace——**可观测**
 
 ## 🛠️ 技术栈
 
@@ -219,5 +192,5 @@ MIT
 
 ## 🤝 配套仓库
 
-- **后端**：[secops-copilot-backend](https://github.com/sec-8/secops-copilot)
-- **演示 Demo GIF**：[链接待补]
+- **后端**：[secops-copilot](https://github.com/sec-8/secops-copilot)
+- **演示 Demo**：（可现场演示）
