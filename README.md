@@ -13,7 +13,7 @@ SecOps Copilot 的前端 Web 应用。**实时推理可视化** + **多用户记
 
 ## 🎬 效果预览
 
-<video controls src="https://github.com/sec-8/secops-copilot-web/blob/master/demo.webm?raw=true"></video>
+![演示]([https://github.com/sec-8/secops-copilot-web/blob/master/demo.webm?raw=true)
 
 > 演示：v2 模式 4 Agent 协同推理 + 打字机逐字输出 + 工具卡片自动折叠 + 用户切换历史隔离
 
