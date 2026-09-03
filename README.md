@@ -11,37 +11,37 @@
 
 SecOps Copilot 的前端 Web 应用。**实时推理可视化** + **多用户记忆隔离**——把后端 4 Agent 协同（Supervisor + RAG + Tool + Memory）的全过程**逐事件渲染**给用户。
 
+## 🎬 效果预览
+
+<video controls width="100%" style="max-width: 800px; border-radius: 8px; border: 1px solid #e1e4e8;">
+  <source src="./assets/demo.webm" type="video/webm">
+  您的浏览器不支持视频播放，请升级浏览器或点击下方链接查看。
+</video>
+
+> 演示：v2 模式 4 Agent 协同推理（状态栏逐帧更新）+ 打字机逐字输出 + 工具卡片折叠
+
 ## ✨ 核心特性（v2）
 
 ### 1. **打字机效果**（useTypewriter hook，25ms/字，App.tsx 传参）
 - LLM 流式回答**逐字渲染**——**不**等**完整**答案
 - 用户能**看到** AI **在思考**——**降低**等待焦虑
 
-### 2. **工具调用卡片**（ToolCallCard）
-- 工具名称 + 参数 + 结果**自动折叠**（finalAnswer 到达时一次性折）
-- 多次工具调用**用 call_id 配对**（tool_call ↔ tool_result）
-- 紧邻重发去重（同 call_id + 同 name + 同 args + 未收 result → 挡掉，防 SSE 抖包）
-
-### 3. **v1/v2 切换**（默认 v2）
+### 2. **v1/v2 切换**（默认 v2）
 - v1：`/chat/stream`（手写 ReAct + 4 tier 降级，**无记忆**）
 - v2：`/v2/chat/stream`（4 Agent 协同 + 三层 Memory）
 - 切换时**重置流状态 + 清消息**（避免跨版本状态污染）
 
-### 4. **多用户隔离**（UserSwitcher + Redis 24h）
+### 3. **多用户隔离**（UserSwitcher + Redis 24h）
 - 3 固定用户，用户切换**不串台**
 - user_id **双保险**透传：`X-User-ID` header + `body.user_id`
 - localStorage 存 user_id（**关页签不丢**） + sessionStorage 存 version
 - 跨页签同步：`window.addEventListener("storage", ...)` 监听 user_id 变更
 - 切用户 → 清 useChatStream 状态 + 清累积消息 + 重拉 Redis history
 
-### 5. **状态 label 管道**（细化状态事件）
+### 4. **状态 label 管道**（细化状态事件）
 - 后端 SSE `thinking_start` 事件带 `label` 字段（"Supervisor 分派中" / "拆解子问题中" / "检索子问题 1/4: XX问题" / "整合 N 篇资料，生成答案中"）
 - 前端 `useChatStream.setStatusLabel(label)` → App 透传 → `StatusBar` 显示
 - 协议向后兼容（label 可选，老 SSE 不带 label 也能跑）
-
-### 6. **trace_id → Langfuse 跳转**
-- final_answer 事件带 `trace_id`
-- Header 显示"查看完整 trace ↗"链接
 
 ## 🏗️ 架构
 
@@ -94,11 +94,6 @@ graph TB
     F -->|localStorage| L[浏览器]
     L -->|storage 事件| F
 ```
-
-**对应后端**：
-- `POST /v2/chat/stream` SSE **端点**（4 Agent 协同 + 三层 Memory + 6 层嵌套 trace）
-- `POST /chat/stream` SSE **端点**（v1 手写 ReAct + 6 层嵌套 trace）
-- `GET /chat/history?session_id=&user_id=` **端点**（Redis 24h 短期 Memory 拉取）
 
 ## 📂 项目结构
 
@@ -203,14 +198,6 @@ while (true) {
 - **持久化**：localStorage（user_id / session_id，**浏览器级**）+ sessionStorage（version）
 - **部署**：Docker（多阶段构建）
 
-## 🧪 验证
-
-- **打字机效果**：发任意问题 → 看到 AI 逐字输出
-- **工具卡折叠**：finalAnswer 到达时工具卡一次性自动折叠
-- **多用户隔离**：切到小明 → 看到小明自己的对话；切回小胖 → 不串台
-- **跨页签同步**：A 页签切到小明 → B 页签自动跟随
-- **状态 label**：问复杂问题 → StatusBar 显示"拆解子问题中" → "检索子问题 1/4" → "整合 N 篇资料，生成答案中"
-- **trace 跳转**：点 Header "查看完整 trace ↗" → 跳 Langfuse Dashboard 6 层嵌套 trace
 
 ## 📝 License
 
@@ -234,4 +221,3 @@ MIT
 | 多用户 | 单用户 | `UserSwitcher` + `localStorage` + 跨页签 `storage` 事件 |
 | 工具卡 | 手动折叠 | finalAnswer 到达时一次性自动折叠 |
 | 历史回显 | 无 | `useChatHistory` 装入 `messages` |
-| 持久化语义 | localStorage（**浏览器级**）|
