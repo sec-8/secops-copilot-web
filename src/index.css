@@ -3,3 +3,24 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* 工具卡片入场动画（检索太快 → 事件同帧到达，用 stagger 动画补视觉节奏）*/
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.card-enter {
+  animation: card-enter 0.25s ease-out backwards;
+}
+/* 无障碍：用户系统开了“减少动态效果”就不播动画 */
+@media (prefers-reduced-motion: reduce) {
+  .card-enter {
+    animation: none;
+  }
+}

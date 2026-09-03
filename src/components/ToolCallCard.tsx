@@ -1,7 +1,7 @@
-// 工具调用卡片（A 方案：主区气泡样式）
+// 工具调用卡片
 // 暗色：比 finalAnswer 暗一个层次（slate-50 底 + slate-500/600 文字）
 // 折叠：6 行以上默认折叠，finalAnswer 开始打字时自动折叠全部（forceCollapsed）
-
+import { useState, useEffect } from "react"
 import type { FC } from "react"
 import type { ToolPair } from "../types/events"
 import ReactMarkdown from "react-markdown"
@@ -10,26 +10,24 @@ import remarkGfm from "remark-gfm"
 interface Props {
   tool: ToolPair
   index: number
-  collapsed: boolean
-  onToggle: () => void
+  defaultCollapsed?: boolean 
 }
 
-const PREVIEW_LINES = 6
+const PREVIEW_LINES = 2
 
 export const ToolCallCard: FC<Props> = ({
   tool,
   index,
-  collapsed,
-  onToggle,
+  defaultCollapsed = true,
 }) => {
   const hasResult = tool.result !== undefined
   const statusColor = hasResult
     ? "bg-emerald-500/70"
     : "bg-amber-500 animate-pulse"
   const statusText = hasResult ? "已完成" : "执行中..."
-
   // 折叠状态：完全由用户控制（App.tsx 会在 finalAnswer 到达时自动默认折叠）
-  const isCollapsed = collapsed
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
+  const onToggle = () => setIsCollapsed(prev => !prev)
 
   // 结果预览
   const resultText = tool.result ?? ""
@@ -38,9 +36,17 @@ export const ToolCallCard: FC<Props> = ({
   const previewText = isCollapsed
     ? resultLines.slice(0, PREVIEW_LINES).join("\n")
     : resultText
-
+  
+    // 父组件信号变化时同步（比如 finalAnswer 到达 → 全部折叠）
+  useEffect(() => {
+    setIsCollapsed(defaultCollapsed)
+  }, [defaultCollapsed])
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden opacity-90">
+    <div
+      className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden opacity-90 card-enter"
+      // 入场 stagger：同帧到达的多张卡片按序号错峰浮现（120ms/张，封顶 720ms）
+      style={{ animationDelay: `${Math.min((index - 1) * 120, 720)}ms` }}
+    >
       {/* Header */}
       <div className="px-4 py-2 bg-slate-100/70 border-b border-slate-200 flex items-center gap-3">
         {/* 序号 */}

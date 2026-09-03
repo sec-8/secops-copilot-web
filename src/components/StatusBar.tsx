@@ -6,6 +6,9 @@ import type { ChatStatus } from "../types/events"
 
 interface Props {
   status: ChatStatus
+  // 细化状态：thinking 阶段的后端 label（如“Supervisor 分派中”）
+  // undefined → 显示默认“思考中...”，v1 无 label 不受影响
+  label?: string
   error?: string
 }
 
@@ -50,8 +53,10 @@ const STATUS_MAP: Record<
   },
 }
 
-export const StatusBar: FC<Props> = ({ status, error }) => {
+export const StatusBar: FC<Props> = ({ status, label, error }) => {
   const meta = STATUS_MAP[status]
+  // thinking + 后端 label 优先；否则回退默认文案
+  const text = (status === "thinking" && label) ? label : meta.text
   return (
     <div
         className={`fixed top-14 left-0 right-0 z-10 ${meta.bg} backdrop-blur border-b border-slate-200 px-6 py-2 flex items-center gap-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]`}
@@ -66,7 +71,7 @@ export const StatusBar: FC<Props> = ({ status, error }) => {
           )}
         </div>
         <span className={`text-xs font-medium ${meta.textColor}`}>
-          {meta.text}
+          {text}
         </span>
 
         {/* 思考中：底部进度条 */}

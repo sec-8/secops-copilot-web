@@ -15,7 +15,6 @@ COPY . .
 RUN npm run build    # tsc -b && vite build
 
 # 阶段 2：导出（不做 serve，由前端 dev 跑 npm run preview）
-# 你可以只输出 dist 目录，不写 nginx 阶段
 FROM scratch AS exporter
 COPY --from=builder /app/dist /dist
 # 这个阶段不跑，只为导出产物到主机

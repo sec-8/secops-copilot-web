@@ -11,6 +11,10 @@ export default defineConfig({
         changeOrigin: true,
         // 不 rewrite：后端路由是 /chat/stream，rewrite 会把 /chat 替换为控
       },
+      '/v2': { 
+        target: 'http://localhost:8000', 
+        changeOrigin: true 
+      },
       '/extract': {
         target: 'http://localhost:8000',
         changeOrigin: true,
